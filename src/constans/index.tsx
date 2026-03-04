@@ -131,7 +131,7 @@ export const prokers: Proker[] = [
 export const timeline: Timeline[] = [
     {
         id: "Pendaftaran Online",
-        date: "04 - 12 Maret 2026",
+        date: "04 - 13 Maret 2026",
         title: "Pembukaan Pendaftaran",
         desc: "Isi formulir pendaftaran onlinedan upload berkas yang diperlukan.",
     },
@@ -213,6 +213,21 @@ export const faqs: Faq[] = [
         id: "daftar-lagi",
         q: "Jika tidak lolos, apakah bisa mendaftar lagi?",
         a: "Tentu saja bisa. Biasanya oprec dibuka setiap periode kepengurusan.",
+    },
+    {
+        id: "himsi-it",
+        q: "Apakah HIMSI hanya fokus pada bidang IT?",
+        a: "Tidak. Selain bidang akademik/IT, HIMSI juga mengembangkan soft skill seperti komunikasi, kepemimpinan, manajemen event, dan public speaking.",
+    },
+    {
+        id: "info-terbaru",
+        q: "Bagaimana cara mengetahui informasi terbaru HIMSI?",
+        a: "Melalui media sosial resmi HIMSI (Instagram, Tiktok, YouTube, Website) atau grup informasi mahasiswa Sistem Informasi.",
+    },
+    {
+        id: "sertifikat-anggota",
+        q: "Apakah menjadi anggota HIMSI mendapatkan sertifikat?",
+        a: "Ya, biasanya anggota aktif akan mendapatkan sertifikat kepengurusan di akhir periode sebagai bentuk apresiasi kontribusi.",
     },
 ];
 
