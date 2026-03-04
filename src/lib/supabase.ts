@@ -7,7 +7,19 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env')
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+        persistSession: true,      
+        storageKey: 'app-auth',    
+        storage: {
+            getItem: (key) => sessionStorage.getItem(key),
+            setItem: (key, value) => sessionStorage.setItem(key, value),
+            removeItem: (key) => sessionStorage.removeItem(key),
+        },
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+    }
+})
 
 export type PendaftaranRow = {
     id: string
