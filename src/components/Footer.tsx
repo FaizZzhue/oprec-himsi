@@ -10,7 +10,7 @@ const Footer = () => {
                         Himsi
                         <span className="text-[#d3a32d]"> Oprec</span>
                     </h2> */}
-                    <p className="text-sm text-foreground mt-1">
+                    <p className="text-xs text-foreground mt-1">
                         © 2026 HIMSI UMDP. All rights reserved.
                     </p>
                 </div>
