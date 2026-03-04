@@ -6,12 +6,12 @@ const Footer = () => {
         <footer className="border-t border-border/50 py-12 px-4">
             <div className="container mx-auto flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                 <div className="shrink-0 text-center md:text-left">
-                    <h2 className="text-3xl md:text-3xl font-bold text-center mb-2 text-[#5a9fd4]">
+                    {/* <h2 className="text-3xl md:text-3xl font-bold text-center mb-2 text-[#5a9fd4]">
                         Himsi
                         <span className="text-[#d3a32d]"> Oprec</span>
-                    </h2>
+                    </h2> */}
                     <p className="text-sm text-foreground mt-1">
-                        © 2026 All rights reserved.
+                        © 2026 HIMSI UMDP. All rights reserved.
                     </p>
                 </div>
 
