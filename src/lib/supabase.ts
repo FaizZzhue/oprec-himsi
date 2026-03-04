@@ -7,15 +7,26 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env')
 }
 
+const secureStorage = {
+    getItem: (key: string): string | null => {
+        localStorage.removeItem(key)
+        return sessionStorage.getItem(key)
+    },
+    setItem: (key: string, value: string): void => {
+        localStorage.removeItem(key)
+        sessionStorage.setItem(key, value)
+    },
+    removeItem: (key: string): void => {
+        localStorage.removeItem(key)
+        sessionStorage.removeItem(key)
+    },
+}
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-        persistSession: true,      
-        storageKey: 'app-auth',    
-        storage: {
-            getItem: (key) => sessionStorage.getItem(key),
-            setItem: (key, value) => sessionStorage.setItem(key, value),
-            removeItem: (key) => sessionStorage.removeItem(key),
-        },
+        persistSession: true,
+        storageKey: 'app-auth',
+        storage: secureStorage,
         autoRefreshToken: true,
         detectSessionInUrl: true,
     }

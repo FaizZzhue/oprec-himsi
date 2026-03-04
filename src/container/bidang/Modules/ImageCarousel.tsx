@@ -59,9 +59,9 @@ export default function ImageCarousel({
                 <X className="w-5 h-5" />
             </Button>
 
-            <div className="absolute bottom-4 left-6 flex items-center gap-3">
-                <div className="w-20 h-13 rounded-xl bg-primary/20 backdrop-blur-sm flex items-center justify-center">
-                    <div.icon className="w-6 h-6 text-primary" />
+            <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-6 flex items-center gap-2 sm:gap-3">
+                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
+                    <div.icon className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
                 </div>
                 <div className="">
                     <h3 className="text-2xl font-bold text-foreground">{div.name}</h3>

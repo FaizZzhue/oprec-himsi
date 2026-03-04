@@ -145,7 +145,7 @@ export const timeline: Timeline[] = [
         id: "pengumuman",
         date: "16 Maret 2026",
         title: "Pengumuman",
-        desc: "Hasil seleksi akhir diumumkan melalui website dan media sosial.",
+        desc: "Hasil seleksi akhir diumumkan melalui website dan whatsApp groub.",
     },
     {
         id: "onboarding",

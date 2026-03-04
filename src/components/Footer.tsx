@@ -1,15 +1,12 @@
 import { Instagram, Mail, Linkedin } from "lucide-react";
-import { navlink } from "@/constans"; 
+import { navlink } from "@/constans";
 
 const Footer = () => {
     return (
         <footer className="border-t border-border/50 py-12 px-4">
             <div className="container mx-auto flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-                <div className="shrink-0 text-center md:text-left">
-                    {/* <h2 className="text-3xl md:text-3xl font-bold text-center mb-2 text-[#5a9fd4]">
-                        Himsi
-                        <span className="text-[#d3a32d]"> Oprec</span>
-                    </h2> */}
+
+                <div className="shrink-0 text-center md:text-left order-2 md:order-none">
                     <p className="text-xs text-foreground mt-1">
                         © 2026 HIMSI UMDP. All rights reserved.
                     </p>
@@ -17,7 +14,7 @@ const Footer = () => {
 
                 <nav
                     aria-label="Footer navigation"
-                    className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
+                    className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm order-1 md:order-none"
                 >
                     {navlink.map((item) => (
                         <a
@@ -30,7 +27,7 @@ const Footer = () => {
                     ))}
                 </nav>
 
-                <div className="flex justify-center gap-4 md:justify-end">
+                <div className="flex justify-center gap-4 md:justify-end order-3 md:order-none">
                     <a
                         href="https://www.instagram.com/himsi.umdp/"
                         target="_blank"
@@ -59,6 +56,7 @@ const Footer = () => {
                         <Linkedin className="w-5 h-5" />
                     </a>
                 </div>
+
             </div>
         </footer>
     );
