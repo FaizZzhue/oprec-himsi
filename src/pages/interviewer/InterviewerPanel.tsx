@@ -1,20 +1,16 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
-  LogOut,
-  ClipboardList,
-  X,
-  Save,
-  ChevronDown,
-  BookOpen,
-  CheckCircle2,
-  ChevronRight,
-  FileText,
+  LogOut, ClipboardList, X, Save, ChevronDown,
+  BookOpen, CheckCircle2, ChevronRight, FileText,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useInterviewerAuth } from '@/hooks/useInterviewerAuth'
 import type { PendaftaranRow, NilaiWawancaraRow } from '@/lib/supabase'
 import { upsertNilai, getNilaiByInterviewer } from '@/services/nilaiWawancara'
 import { getCVSignedUrl } from '@/services/pendaftaran'
+
+const PENILAI_KEY = 'oprec_penilai_name'
+const BIDANG_LIST = ['PSDM', 'Sosial', 'Kominfo', 'Litbang']
 
 const INTERVIEW_QUESTIONS = [
   {
@@ -92,55 +88,35 @@ const INTERVIEW_QUESTIONS = [
       '[PSDM] Apa langkah konkret untuk menjaga keberlanjutan kualitas anggota di masa depan?',
       '[PSDM] Bagaimana cara kamu mengenali potensi seseorang dalam tim?',
       '[PSDM] Budaya organisasi seperti apa yang harus dibangun agar anggota betah, berkembang, dan loyal?',
+      '[PSDM] Jika ada konflik antar anggota, bagaimana pendekatan kamu sebagai PSDM?',
       '[Litbang] Apakah kamu lebih memahami teknologi pemrograman atau non-pemrograman?',
       '[Litbang] Bagaimana kamu memanfaatkan AI untuk mendukung kegiatan organisasi dan perkuliahan?',
       '[Litbang] Tools atau teknologi apa yang biasa kamu gunakan dan ingin kamu kembangkan lebih lanjut?',
+      '[Litbang] Bagaimana cara kamu berkomunikasi dengan divisi non-IT agar mereka memahami kebutuhan teknis?',
+      '[Litbang] Apakah Anda bersedia terus belajar dan mengembangkan teknologi, berkolaborasi dalam tim, serta mengikuti lomba untuk mendukung peningkatan akreditasi kampus?',
       '[Sosial] Bagaimana cara kamu mengajak anggota lain untuk peduli terhadap kegiatan sosial?',
       '[Sosial] Apa tantangan terbesar dalam menumbuhkan empati di kalangan mahasiswa?',
+      '[Sosial] Bagaimana cara memastikan kegiatan sosial kita tidak hanya sekali jalan tapi berdampak nyata dalam jangka panjang?',
+      '[Sosial] Bagaimana kamu menghadapi situasi ketika realita di lapangan tidak sesuai ekspektasi?',
       '[Kominfo] Ceritakan pengalaman kamu dalam membuat konten (desain, video, media sosial).',
       '[Kominfo] Bagaimana strategi kamu agar publikasi tetap berjalan konsisten saat tim sibuk?',
       '[Kominfo] Tools desain atau editing apa yang kamu kuasai saat ini?',
+      '[Kominfo] Bagaimana kamu mengatur alur kerja agar publikasi tetap berjalan rapi, tepat waktu, dan tidak bentrok dengan kegiatan lain?',
+      '[Kominfo] Bagaimana cara membangun dan menjaga citra/branding organisasi agar dikenal, dipercaya, dan menarik di mata publik?',
     ],
   },
 ]
 
 const SCORE_CATEGORIES = [
-  { key: 'sikap', label: 'Sikap', desc: 'Sopan santun, etika, dan sikap selama wawancara' },
-  { key: 'public_speaking', label: 'Public Speaking', desc: 'Kemampuan berbicara, artikulasi, dan kepercayaan diri' },
-  { key: 'wawasan_org', label: 'Wawasan Organisasi', desc: 'Pengetahuan tentang HIMSI, bidang, dan proker' },
-  { key: 'manajemen', label: 'Manajemen Waktu', desc: 'Kemampuan mengatur dan memprioritaskan waktu' },
-  { key: 'teamwork', label: 'Teamwork', desc: 'Kemampuan kerja sama dan kolaborasi dalam tim' },
-  { key: 'leadership', label: 'Leadership', desc: 'Jiwa kepemimpinan dan pengambilan keputusan' },
-  { key: 'komitmen', label: 'Komitmen', desc: 'Kesungguhan dan kesiapan berorganisasi' },
-  { key: 'bidang', label: 'Bidang', desc: 'Kesesuaian dengan bidang yang dipilih' },
+  { key: 'sikap',           label: 'Sikap',                desc: 'Sopan santun, etika, dan sikap selama wawancara'       },
+  { key: 'public_speaking', label: 'Public Speaking',      desc: 'Kemampuan berbicara, artikulasi, dan kepercayaan diri'  },
+  { key: 'wawasan_org',     label: 'Wawasan Organisasi',   desc: 'Pengetahuan tentang HIMSI, bidang, dan proker'          },
+  { key: 'manajemen',       label: 'Manajemen Waktu',      desc: 'Kemampuan mengatur dan memprioritaskan waktu'           },
+  { key: 'teamwork',        label: 'Teamwork',             desc: 'Kemampuan kerja sama dan kolaborasi dalam tim'          },
+  { key: 'leadership',      label: 'Leadership',           desc: 'Jiwa kepemimpinan dan pengambilan keputusan'            },
+  { key: 'komitmen',        label: 'Komitmen',             desc: 'Kesungguhan dan kesiapan berorganisasi'                 },
+  { key: 'bidang',          label: 'Bidang',               desc: 'Kesesuaian dengan bidang yang dipilih'                  },
 ] as const
-
-type ScoreKey = (typeof SCORE_CATEGORIES)[number]['key']
-type Scores = Record<ScoreKey, number | ''>
-
-type Penilai = { nama: string; ruang: string }
-
-const PENILAI_KEY = 'oprec_penilai_name'
-
-const emptyScores = (): Scores =>
-  Object.fromEntries(SCORE_CATEGORIES.map((c) => [c.key, ''])) as Scores
-
-const nilaiToScores = (n: NilaiWawancaraRow): Scores => ({
-  sikap: n.sikap ?? '',
-  public_speaking: n.public_speaking ?? '',
-  wawasan_org: n.wawasan_org ?? '',
-  manajemen: n.manajemen ?? '',
-  teamwork: n.teamwork ?? '',
-  leadership: n.leadership ?? '',
-  komitmen: n.komitmen ?? '',
-  bidang: n.bidang ?? '',
-})
-
-const calcAvg = (scores: Scores): string => {
-  const vals = Object.values(scores).filter((v) => v !== '') as number[]
-  if (!vals.length) return '—'
-  return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
-}
 
 const SCORE_LABELS = ['', 'Sangat Buruk', 'Kurang Baik', 'Cukup Baik', 'Baik', 'Sangat Baik']
 const SCORE_COLORS = [
@@ -152,8 +128,41 @@ const SCORE_COLORS = [
   'bg-green-100 text-green-700 border-green-300',
 ]
 
+type ScoreKey = (typeof SCORE_CATEGORIES)[number]['key']
+type Scores   = Record<ScoreKey, number | ''>
+type Penilai  = { nama: string; ruang: string }
+
+const emptyScores = (): Scores =>
+  Object.fromEntries(SCORE_CATEGORIES.map((c) => [c.key, ''])) as Scores
+
+const nilaiToScores = (n: NilaiWawancaraRow): Scores => ({
+  sikap:           n.sikap           ?? '',
+  public_speaking: n.public_speaking ?? '',
+  wawasan_org:     n.wawasan_org     ?? '',
+  manajemen:       n.manajemen       ?? '',
+  teamwork:        n.teamwork        ?? '',
+  leadership:      n.leadership      ?? '',
+  komitmen:        n.komitmen        ?? '',
+  bidang:          n.bidang          ?? '',
+})
+
+const calcAvg = (scores: Scores): string => {
+  const vals = Object.values(scores).filter((v) => v !== '') as number[]
+  if (!vals.length) return '—'
+  return (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)
+}
+
+const avgColor = (avg: string) => {
+  if (avg === '—') return 'text-gray-300'
+  const n = parseFloat(avg)
+  if (n >= 4) return 'text-green-600'
+  if (n >= 3) return 'text-blue-600'
+  return 'text-orange-600'
+}
+
 function PanduanModal({ onClose }: { onClose: () => void }) {
   const [activeKat, setActiveKat] = useState(0)
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-hidden"
@@ -168,13 +177,11 @@ function PanduanModal({ onClose }: { onClose: () => void }) {
             <BookOpen className="w-4 h-4" />
           </div>
           <p className="font-extrabold text-gray-800 flex-1 text-sm">Panduan Pertanyaan Wawancara</p>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400"
-          >
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400">
             <X className="w-4 h-4" />
           </button>
         </div>
+
         <div className="flex flex-1 overflow-hidden min-h-0">
           <div className="w-44 border-r border-gray-100 flex flex-col overflow-y-auto shrink-0">
             {INTERVIEW_QUESTIONS.map((kat, i) => (
@@ -190,17 +197,13 @@ function PanduanModal({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
-            <span
-              className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold border ${INTERVIEW_QUESTIONS[activeKat].warna}`}
-            >
+            <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold border ${INTERVIEW_QUESTIONS[activeKat].warna}`}>
               {INTERVIEW_QUESTIONS[activeKat].kategori}
             </span>
             {INTERVIEW_QUESTIONS[activeKat].pertanyaan.map((q, i) => (
-              <div
-                key={i}
-                className="flex gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50/40 transition-colors"
-              >
+              <div key={i} className="flex gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50/40 transition-colors">
                 <span className="w-6 h-6 rounded-lg bg-gray-200 text-gray-600 text-xs font-extrabold flex items-center justify-center shrink-0">
                   {i + 1}
                 </span>
@@ -214,14 +217,9 @@ function PanduanModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+
 function PenilaianModal({
-  row,
-  scores,
-  catatan,
-  onClose,
-  onSave,
-  saving,
-  penilaiName,
+  row, scores, catatan, onClose, onSave, saving, penilaiName,
 }: {
   row: PendaftaranRow
   scores: Scores
@@ -231,11 +229,18 @@ function PenilaianModal({
   saving: boolean
   penilaiName: string
 }) {
-  const [local, setLocal] = useState<Scores>({ ...scores })
+  const [local, setLocal]             = useState<Scores>({ ...scores })
   const [localCatatan, setLocalCatatan] = useState(catatan)
   const [showPanduan, setShowPanduan] = useState(false)
-  const avg = calcAvg(local)
+
+  const avg    = calcAvg(local)
   const avgNum = avg !== '—' ? parseFloat(avg) : null
+
+  const avgBorderBg =
+    avgNum === null ? 'border-gray-100 bg-gray-50'
+    : avgNum >= 4   ? 'border-green-200 bg-green-50'
+    : avgNum >= 3   ? 'border-blue-200 bg-blue-50'
+    :                 'border-orange-200 bg-orange-50'
 
   return (
     <>
@@ -253,12 +258,8 @@ function PenilaianModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-extrabold text-gray-800 text-sm truncate">{row.nama}</p>
-              <p className="text-xs text-gray-400 font-semibold">
-                {row.npm} · {row.bidang1} / {row.bidang2}
-              </p>
-              <p className="text-[11px] text-[#2464a8] font-extrabold mt-1">
-                Penilai: {penilaiName || '—'}
-              </p>
+              <p className="text-xs text-gray-400 font-semibold">{row.npm} · {row.bidang1} / {row.bidang2}</p>
+              <p className="text-[11px] text-[#2464a8] font-extrabold mt-1">Penilai: {penilaiName || '—'}</p>
             </div>
             <button
               onClick={() => setShowPanduan(true)}
@@ -266,10 +267,7 @@ function PenilaianModal({
             >
               <BookOpen className="w-3 h-3" /> Panduan
             </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 shrink-0"
-            >
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -289,11 +287,7 @@ function PenilaianModal({
                       <p className="text-xs text-gray-400 font-semibold mt-0.5">{cat.desc}</p>
                     </div>
                     {v !== '' && (
-                      <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                          SCORE_COLORS[v as number]
-                        }`}
-                      >
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border shrink-0 ${SCORE_COLORS[v as number]}`}>
                         {SCORE_LABELS[v as number]}
                       </span>
                     )}
@@ -302,9 +296,7 @@ function PenilaianModal({
                     {[1, 2, 3, 4, 5].map((n) => (
                       <button
                         key={n}
-                        onClick={() =>
-                          setLocal((p) => ({ ...p, [cat.key]: p[cat.key] === n ? '' : n }))
-                        }
+                        onClick={() => setLocal((p) => ({ ...p, [cat.key]: p[cat.key] === n ? '' : n }))}
                         className={[
                           'flex-1 h-9 rounded-xl text-sm font-extrabold border-2 transition-all',
                           local[cat.key] === n
@@ -320,39 +312,14 @@ function PenilaianModal({
               )
             })}
 
-            <div
-              className={[
-                'rounded-xl border-2 px-4 py-3 flex items-center justify-between',
-                avgNum !== null
-                  ? avgNum >= 4
-                    ? 'border-green-200 bg-green-50'
-                    : avgNum >= 3
-                      ? 'border-blue-200 bg-blue-50'
-                      : 'border-orange-200 bg-orange-50'
-                  : 'border-gray-100 bg-gray-50',
-              ].join(' ')}
-            >
+            <div className={`rounded-xl border-2 px-4 py-3 flex items-center justify-between ${avgBorderBg}`}>
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Rata-rata Nilai</p>
                 <p className="text-xs text-gray-400 font-semibold">
-                  {Object.values(local).filter((v) => v !== '').length} dari {SCORE_CATEGORIES.length}{' '}
-                  kategori dinilai
+                  {Object.values(local).filter((v) => v !== '').length} dari {SCORE_CATEGORIES.length} kategori dinilai
                 </p>
               </div>
-              <span
-                className={[
-                  'text-3xl font-extrabold',
-                  avgNum !== null
-                    ? avgNum >= 4
-                      ? 'text-green-600'
-                      : avgNum >= 3
-                        ? 'text-blue-600'
-                        : 'text-orange-600'
-                    : 'text-gray-300',
-                ].join(' ')}
-              >
-                {avg}
-              </span>
+              <span className={`text-3xl font-extrabold ${avgColor(avg)}`}>{avg}</span>
             </div>
 
             <div>
@@ -374,17 +341,10 @@ function PenilaianModal({
               disabled={saving}
               className="w-full h-11 bg-[#2464a8] hover:bg-[#2464a8]/90 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
             >
-              {saving ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Simpan Penilaian
-                </>
-              )}
+              {saving
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Menyimpan...</>
+                : <><Save className="w-4 h-4" />Simpan Penilaian</>
+              }
             </button>
           </div>
         </div>
@@ -394,23 +354,16 @@ function PenilaianModal({
   )
 }
 
+
 function DetailModal({ row, onClose }: { row: PendaftaranRow; onClose: () => void }) {
   const [opening, setOpening] = useState(false)
 
   const openCv = async () => {
     const path = row.cv_url as unknown as string | null | undefined
     if (!path) return
-
     setOpening(true)
     try {
-      // kalau sudah full url
-      if (path.startsWith('http://') || path.startsWith('https://')) {
-        window.open(path, '_blank', 'noopener,noreferrer')
-        return
-      }
-
-      // kalau path storage, pakai signed url
-      const url = await getCVSignedUrl(path)
+      const url = path.startsWith('http') ? path : await getCVSignedUrl(path)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (e) {
       console.error(e)
@@ -439,10 +392,7 @@ function DetailModal({ row, onClose }: { row: PendaftaranRow; onClose: () => voi
               {row.nama} · {row.npm} · {row.bidang1} / {row.bidang2}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 shrink-0"
-          >
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -451,9 +401,7 @@ function DetailModal({ row, onClose }: { row: PendaftaranRow; onClose: () => voi
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Alasan Mendaftar</p>
             <p className="text-sm font-semibold text-gray-700 whitespace-pre-wrap leading-relaxed">
-              {(row.alasan as unknown as string | null | undefined)?.trim()
-                ? (row.alasan as unknown as string)
-                : '—'}
+              {(row.alasan as unknown as string | null | undefined)?.trim() || '—'}
             </p>
           </div>
 
@@ -462,32 +410,21 @@ function DetailModal({ row, onClose }: { row: PendaftaranRow; onClose: () => voi
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">CV</p>
               <p className="text-sm font-semibold text-gray-700 mt-1">{row.cv_url ? 'Tersedia' : 'Tidak ada file'}</p>
             </div>
-
             <button
               onClick={openCv}
               disabled={!row.cv_url || opening}
               className="h-10 px-4 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:hover:bg-indigo-600 flex items-center gap-2"
             >
-              {opening ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Membuka...
-                </>
-              ) : (
-                <>
-                  <FileText className="w-4 h-4" />
-                  Buka CV
-                </>
-              )}
+              {opening
+                ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Membuka...</>
+                : <><FileText className="w-4 h-4" />Buka CV</>
+              }
             </button>
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 shrink-0">
-          <button
-            onClick={onClose}
-            className="w-full h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-bold text-gray-700"
-          >
+          <button onClick={onClose} className="w-full h-11 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-sm font-bold text-gray-700">
             Tutup
           </button>
         </div>
@@ -499,68 +436,57 @@ function DetailModal({ row, onClose }: { row: PendaftaranRow; onClose: () => voi
 export default function InterviewerPanel() {
   const { isLoading, profile, logout } = useInterviewerAuth()
 
-  const [pendaftar, setPendaftar] = useState<PendaftaranRow[]>([])
-  const [nilaiMap, setNilaiMap] = useState<Record<string, NilaiWawancaraRow>>({})
-  const [loadingData, setLoadingData] = useState(true)
-
-  const [penilaiList, setPenilaiList] = useState<Penilai[]>([])
-  const [penilaiName, setPenilaiName] = useState<string>('')
-
-  const [modalRow, setModalRow] = useState<PendaftaranRow | null>(null)
-  const [detailRow, setDetailRow] = useState<PendaftaranRow | null>(null)
-
-  const [savingId, setSavingId] = useState<string | null>(null)
+  const [pendaftar,        setPendaftar]        = useState<PendaftaranRow[]>([])
+  const [nilaiMap,         setNilaiMap]         = useState<Record<string, NilaiWawancaraRow>>({})
+  const [loadingData,      setLoadingData]      = useState(true)
+  const [penilaiList,      setPenilaiList]      = useState<Penilai[]>([])
+  const [penilaiName,      setPenilaiName]      = useState<string>('')
+  const [modalRow,         setModalRow]         = useState<PendaftaranRow | null>(null)
+  const [detailRow,        setDetailRow]        = useState<PendaftaranRow | null>(null)
+  const [savingId,         setSavingId]         = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
-
-  const [searchQuery, setSearchQuery] = useState('')
-  const [bidangFilter, setBidangFilter] = useState('semua')
-  const [showPanduan, setShowPanduan] = useState(false)
+  const [searchQuery,      setSearchQuery]      = useState('')
+  const [bidangFilter,     setBidangFilter]     = useState('semua')
+  const [showPanduan,      setShowPanduan]      = useState(false)
 
   useEffect(() => {
     if (profile) fetchAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
+
+
+  async function fetchNilai(interviewerId: string, name: string) {
+    const nilaiData = await getNilaiByInterviewer(interviewerId, name)
+    const map: Record<string, NilaiWawancaraRow> = {}
+    nilaiData.forEach((n) => { map[n.pendaftaran_id] = n })
+    setNilaiMap(map)
+  }
 
   async function fetchAll() {
     setLoadingData(true)
     try {
-      // 1) list penilai (RLS filter by auth.email())
       const { data: people, error: peopleErr } = await supabase
         .from('interviewer_people')
         .select('nama, ruang')
         .order('nama', { ascending: true })
-
       if (peopleErr) throw peopleErr
+
       const list = (people ?? []) as Penilai[]
       setPenilaiList(list)
 
-      // default penilai
-      const saved = localStorage.getItem(PENILAI_KEY) || ''
-      const valid = list.find((p) => p.nama === saved)?.nama
-      const chosen = valid ?? list[0]?.nama ?? ''
+      const saved  = sessionStorage.getItem(PENILAI_KEY) || ''
+      const chosen = list.find((p) => p.nama === saved)?.nama ?? list[0]?.nama ?? ''
       setPenilaiName(chosen)
-      if (chosen) localStorage.setItem(PENILAI_KEY, chosen)
+      if (chosen) sessionStorage.setItem(PENILAI_KEY, chosen)
 
-      // 2) data pendaftaran
       const { data: pData, error: pErr } = await supabase
         .from('pendaftaran')
         .select('*')
         .order('created_at', { ascending: true })
-
       if (pErr) throw pErr
       setPendaftar((pData ?? []) as PendaftaranRow[])
 
-      // 3) nilai milik penilai yang dipilih
-      if (profile && chosen) {
-        const nilaiData = await getNilaiByInterviewer(profile.id, chosen)
-        const map: Record<string, NilaiWawancaraRow> = {}
-        nilaiData.forEach((n) => {
-          map[n.pendaftaran_id] = n
-        })
-        setNilaiMap(map)
-      } else {
-        setNilaiMap({})
-      }
+      if (profile && chosen) await fetchNilai(profile.id, chosen)
+      else setNilaiMap({})
     } finally {
       setLoadingData(false)
     }
@@ -568,56 +494,34 @@ export default function InterviewerPanel() {
 
   async function handleChangePenilai(name: string) {
     setPenilaiName(name)
-    localStorage.setItem(PENILAI_KEY, name)
-
+    sessionStorage.setItem(PENILAI_KEY, name)
     if (!profile) return
     setLoadingData(true)
-    try {
-      const nilaiData = await getNilaiByInterviewer(profile.id, name)
-      const map: Record<string, NilaiWawancaraRow> = {}
-      nilaiData.forEach((n) => {
-        map[n.pendaftaran_id] = n
-      })
-      setNilaiMap(map)
-    } finally {
-      setLoadingData(false)
-    }
+    try { await fetchNilai(profile.id, name) }
+    finally { setLoadingData(false) }
   }
 
-  const filtered = useMemo(
-    () =>
-      pendaftar.filter((d) => {
-        const matchBidang = bidangFilter === 'semua' || d.bidang1 === bidangFilter || d.bidang2 === bidangFilter
-        const q = searchQuery.toLowerCase()
-        return matchBidang && (!q || d.nama.toLowerCase().includes(q) || d.npm.includes(q))
-      }),
-    [pendaftar, bidangFilter, searchQuery]
-  )
 
   async function handleSave(row: PendaftaranRow, scores: Scores, catatan: string) {
     if (!profile) return
-    if (!penilaiName) {
-      alert('Pilih Nama Penilai terlebih dahulu.')
-      return
-    }
+    if (!penilaiName) { alert('Pilih Nama Penilai terlebih dahulu.'); return }
 
     setSavingId(row.id)
     try {
       const saved = await upsertNilai({
-        pendaftaran_id: row.id,
-        interviewer_id: profile.id,
+        pendaftaran_id:  row.id,
+        interviewer_id:  profile.id,
         interviewer_name: penilaiName,
-        sikap: scores.sikap === '' ? null : (scores.sikap as number),
+        sikap:           scores.sikap           === '' ? null : (scores.sikap           as number),
         public_speaking: scores.public_speaking === '' ? null : (scores.public_speaking as number),
-        wawasan_org: scores.wawasan_org === '' ? null : (scores.wawasan_org as number),
-        manajemen: scores.manajemen === '' ? null : (scores.manajemen as number),
-        teamwork: scores.teamwork === '' ? null : (scores.teamwork as number),
-        leadership: scores.leadership === '' ? null : (scores.leadership as number),
-        komitmen: scores.komitmen === '' ? null : (scores.komitmen as number),
-        bidang: scores.bidang === '' ? null : (scores.bidang as number),
-        catatan: catatan || null,
+        wawasan_org:     scores.wawasan_org     === '' ? null : (scores.wawasan_org     as number),
+        manajemen:       scores.manajemen       === '' ? null : (scores.manajemen       as number),
+        teamwork:        scores.teamwork        === '' ? null : (scores.teamwork        as number),
+        leadership:      scores.leadership      === '' ? null : (scores.leadership      as number),
+        komitmen:        scores.komitmen        === '' ? null : (scores.komitmen        as number),
+        bidang:          scores.bidang          === '' ? null : (scores.bidang          as number),
+        catatan:         catatan || null,
       })
-
       setNilaiMap((p) => ({ ...p, [row.id]: saved }))
       setModalRow(null)
     } finally {
@@ -629,14 +533,29 @@ export default function InterviewerPanel() {
     setUpdatingStatusId(row.id)
     try {
       const { error } = await supabase.rpc('mark_sudah_wawancara', { p_id: row.id })
-      if (error) {
-        await supabase.from('pendaftaran').update({ status: 'selesai_wawancara' }).eq('id', row.id)
-      }
-      setPendaftar((p) => p.map((d) => (d.id === row.id ? { ...d, status: 'selesai_wawancara' } : d)))
+      if (error) await supabase.from('pendaftaran').update({ status: 'selesai_wawancara' }).eq('id', row.id)
+      setPendaftar((p) => p.map((d) => d.id === row.id ? { ...d, status: 'selesai_wawancara' } : d))
     } finally {
       setUpdatingStatusId(null)
     }
   }
+
+
+  const filtered = useMemo(() =>
+    pendaftar.filter((d) => {
+      const matchBidang = bidangFilter === 'semua' || d.bidang1 === bidangFilter || d.bidang2 === bidangFilter
+      const q = searchQuery.toLowerCase()
+      return matchBidang && (!q || d.nama.toLowerCase().includes(q) || d.npm.includes(q))
+    }),
+    [pendaftar, bidangFilter, searchQuery]
+  )
+
+  const stats = useMemo(() => ({
+    total:   pendaftar.length,
+    dinilai: Object.keys(nilaiMap).length,
+    selesai: pendaftar.filter((p) => p.status === 'selesai_wawancara').length,
+  }), [pendaftar, nilaiMap])
+
 
   if (isLoading)
     return (
@@ -645,18 +564,15 @@ export default function InterviewerPanel() {
       </div>
     )
 
-  const BIDANG_LIST = ['PSDM', 'Sosial', 'Kominfo', 'Litbang']
-
   return (
     <div className="min-h-screen bg-gray-50">
+
       <header className="bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between shadow-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="HIMSI" className="w-8 h-8 rounded-xl" />
           <div>
             <p className="font-extrabold text-[#2464a8] text-sm">HIMSI UMDP — Pewawancara</p>
-            <p className="text-xs text-gray-400 font-semibold">
-              {profile?.nama} · {profile?.ruang}
-            </p>
+            <p className="text-xs text-gray-400 font-semibold">{profile?.nama} · {profile?.ruang}</p>
           </div>
         </div>
 
@@ -665,18 +581,15 @@ export default function InterviewerPanel() {
             <select
               value={penilaiName}
               onChange={(e) => handleChangePenilai(e.target.value)}
-              className="appearance-none h-9 rounded-xl border border-gray-200 bg-white pl-3 pr-8 text-xs font-extrabold text-gray-700 focus:outline-none cursor-pointer"
               disabled={penilaiList.length === 0}
+              className="appearance-none h-9 rounded-xl border border-gray-200 bg-white pl-3 pr-8 text-xs font-extrabold text-gray-700 focus:outline-none cursor-pointer"
             >
-              {penilaiList.length === 0 ? (
-                <option value="">Tidak ada penilai</option>
-              ) : (
-                penilaiList.map((p) => (
-                  <option key={p.nama} value={p.nama}>
-                    {p.nama} · {p.ruang}
-                  </option>
-                ))
-              )}
+              {penilaiList.length === 0
+                ? <option value="">Tidak ada penilai</option>
+                : penilaiList.map((p) => (
+                    <option key={p.nama} value={p.nama}>{p.nama} · {p.ruang}</option>
+                  ))
+              }
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
@@ -698,6 +611,7 @@ export default function InterviewerPanel() {
       </header>
 
       <main className="p-5 md:p-8 space-y-5 max-w-6xl mx-auto">
+
         <div className="bg-gradient-to-r from-[#2464a8] to-[#5a9fd4] rounded-2xl p-5 text-white">
           <p className="text-xs font-bold opacity-70 uppercase tracking-wider mb-1">Panel Wawancara</p>
           <p className="text-lg font-extrabold">Selamat datang, {penilaiName || profile?.nama}!</p>
@@ -706,14 +620,9 @@ export default function InterviewerPanel() {
 
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total Peserta', value: pendaftar.length, emoji: '👥', bg: 'bg-blue-50' },
-            { label: 'Sudah Dinilai', value: Object.keys(nilaiMap).length, emoji: '✅', bg: 'bg-green-50' },
-            {
-              label: 'Selesai Wawancara',
-              value: pendaftar.filter((p) => p.status === 'selesai_wawancara').length,
-              emoji: '🏁',
-              bg: 'bg-indigo-50',
-            },
+            { label: 'Total Peserta',      value: stats.total,   emoji: '👥', bg: 'bg-blue-50'   },
+            { label: 'Sudah Dinilai',      value: stats.dinilai, emoji: '✅', bg: 'bg-green-50'  },
+            { label: 'Selesai Wawancara',  value: stats.selesai, emoji: '🏁', bg: 'bg-indigo-50' },
           ].map((s) => (
             <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center gap-2.5">
               <div className={`w-9 h-9 rounded-full ${s.bg} flex items-center justify-center text-lg shrink-0`}>{s.emoji}</div>
@@ -726,8 +635,8 @@ export default function InterviewerPanel() {
         </div>
 
         <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
-          ℹ️ Klik <strong>"Detail"</strong> untuk melihat alasan & CV. Klik <strong>"Nilai"</strong> untuk membuka form penilaian. Klik{' '}
-          <strong>"Selesai"</strong> setelah wawancara peserta selesai.
+          ℹ️ Klik <strong>"Detail"</strong> untuk melihat alasan & CV. Klik <strong>"Nilai"</strong> untuk membuka form penilaian.
+          Klik <strong>"Selesai"</strong> setelah wawancara peserta selesai.
         </div>
 
         <div className="flex flex-wrap gap-3 items-center">
@@ -745,15 +654,13 @@ export default function InterviewerPanel() {
               className="appearance-none rounded-xl border border-gray-200 bg-white pl-3 pr-8 py-2 text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer"
             >
               <option value="semua">Semua Bidang</option>
-              {BIDANG_LIST.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
+              {BIDANG_LIST.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-          <span className="ml-auto text-xs font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{filtered.length} peserta</span>
+          <span className="ml-auto text-xs font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+            {filtered.length} peserta
+          </span>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -767,9 +674,7 @@ export default function InterviewerPanel() {
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80">
                     {['No', 'Nama', 'NPM', 'Bidang 1', 'Bidang 2', 'Status', 'Nilai Saya', 'Rata-rata', 'Aksi'].map((h) => (
-                      <th key={h} className="px-3 py-3 text-left text-xs font-bold text-gray-500 whitespace-nowrap">
-                        {h}
-                      </th>
+                      <th key={h} className="px-3 py-3 text-left text-xs font-bold text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -783,54 +688,42 @@ export default function InterviewerPanel() {
                     </tr>
                   ) : (
                     filtered.map((row, i) => {
-                      const nilai = nilaiMap[row.id]
-                      const scores = nilai ? nilaiToScores(nilai) : emptyScores()
-                      const avg = calcAvg(scores)
+                      const nilai        = nilaiMap[row.id]
+                      const scores       = nilai ? nilaiToScores(nilai) : emptyScores()
+                      const avg          = calcAvg(scores)
                       const sudahDinilai = !!nilai
                       const sudahSelesai = row.status === 'selesai_wawancara'
 
                       return (
                         <tr key={row.id} className="border-b border-gray-50 hover:bg-blue-50/20 transition-colors">
                           <td className="px-3 py-3 text-gray-400 font-bold text-xs">{i + 1}</td>
-
                           <td className="px-3 py-3">
                             <span className="text-xs font-semibold text-gray-800 max-w-[160px] truncate block">{row.nama}</span>
                           </td>
-
                           <td className="px-3 py-3 text-gray-600 font-mono text-xs">{row.npm}</td>
-
                           <td className="px-3 py-3">
                             <span className="rounded-full bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5">{row.bidang1}</span>
                           </td>
-
                           <td className="px-3 py-3">
                             <span className="rounded-full bg-purple-50 text-purple-700 text-xs font-bold px-2 py-0.5">{row.bidang2}</span>
                           </td>
 
                           <td className="px-3 py-3">
-                            {sudahSelesai ? (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Selesai
-                              </span>
-                            ) : (
-                              <span className="inline-block rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5">Pending</span>
-                            )}
+                            {sudahSelesai
+                              ? <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5"><CheckCircle2 className="w-3 h-3" />Selesai</span>
+                              : <span className="inline-block rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold px-2 py-0.5">Pending</span>
+                            }
                           </td>
 
                           <td className="px-3 py-3">
-                            {sudahDinilai ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Dinilai
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-300 font-semibold">Belum</span>
-                            )}
+                            {sudahDinilai
+                              ? <span className="inline-flex items-center gap-1 text-xs font-bold text-green-600"><CheckCircle2 className="w-3 h-3" />Dinilai</span>
+                              : <span className="text-xs text-gray-300 font-semibold">Belum</span>
+                            }
                           </td>
 
                           <td className="px-3 py-3 text-center">
-                            <span className={`text-sm font-extrabold ${avg === '—' ? 'text-gray-300' : 'text-[#2464a8]'}`}>{avg}</span>
+                            <span className={`text-sm font-extrabold ${avgColor(avg)}`}>{avg}</span>
                           </td>
 
                           <td className="px-3 py-3">
@@ -841,7 +734,6 @@ export default function InterviewerPanel() {
                               >
                                 <FileText className="w-3 h-3" /> Detail
                               </button>
-
                               <button
                                 onClick={() => setModalRow(row)}
                                 className="flex items-center gap-1 text-[#2464a8] hover:bg-blue-50 text-xs font-bold px-2 py-1 rounded-lg transition-colors whitespace-nowrap"
@@ -849,7 +741,6 @@ export default function InterviewerPanel() {
                                 <ClipboardList className="w-3 h-3" />
                                 {sudahDinilai ? 'Edit' : 'Nilai'}
                               </button>
-
                               {!sudahSelesai && (
                                 <button
                                   onClick={() => handleSetSelesai(row)}
@@ -884,9 +775,7 @@ export default function InterviewerPanel() {
           penilaiName={penilaiName}
         />
       )}
-
-      {detailRow && <DetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
-
+      {detailRow  && <DetailModal  row={detailRow}  onClose={() => setDetailRow(null)}  />}
       {showPanduan && <PanduanModal onClose={() => setShowPanduan(false)} />}
     </div>
   )

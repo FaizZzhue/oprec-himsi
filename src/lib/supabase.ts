@@ -7,26 +7,36 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in .env')
 }
 
-const secureStorage = {
-    getItem: (key: string): string | null => {
-        localStorage.removeItem(key)
-        return sessionStorage.getItem(key)
-    },
-    setItem: (key: string, value: string): void => {
-        localStorage.removeItem(key)
-        sessionStorage.setItem(key, value)
-    },
-    removeItem: (key: string): void => {
-        localStorage.removeItem(key)
-        sessionStorage.removeItem(key)
-    },
+const cleanOldLocalStorage = () => {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('auth') || key.includes('oprec'))) {
+            keysToRemove.push(key)
+        }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key))
 }
+cleanOldLocalStorage()
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
         persistSession: true,
         storageKey: 'app-auth',
-        storage: secureStorage,
+        storage: {
+            getItem: (key: string) => {
+                localStorage.removeItem(key)
+                return sessionStorage.getItem(key)
+            },
+            setItem: (key: string, value: string) => {
+                localStorage.removeItem(key)
+                sessionStorage.setItem(key, value)
+            },
+            removeItem: (key: string) => {
+                localStorage.removeItem(key)
+                sessionStorage.removeItem(key)
+            },
+        },
         autoRefreshToken: true,
         detectSessionInUrl: true,
     }
