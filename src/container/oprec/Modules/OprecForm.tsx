@@ -8,10 +8,12 @@ import type { OprecForm, OprecErrors } from "@/constans/oprec.type";
 import Field from "./Field";
 import { useOprecForm } from "@/hooks/useOprecForm";
 import { uploadCV, submitPendaftaran } from "@/services/pendaftaran";
-import { CheckCircle2, Loader2, FileText, X } from "lucide-react";
+import { CheckCircle2, Loader2, FileText, X, MessageCircle } from "lucide-react";
 
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
+const WA_LINK = "https://chat.whatsapp.com/I1XeCV1CF0T4cKAYXz98FJ?mode=gi_t";
 
 type SubmitState = "idle" | "uploading" | "saving" | "success" | "error";
 
@@ -103,29 +105,41 @@ export default function OprecForm({ closeAt }: { closeAt: Date }) {
 
   if (submitState === "success") {
     return (
-      <div className="flex flex-col items-center justify-center gap-5 py-12 text-center">
+      <div className="flex flex-col items-center justify-center gap-6 py-10 text-center">
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
           <CheckCircle2 className="w-8 h-8 text-green-500" />
         </div>
+
         <div className="space-y-2">
           <p className="text-xl font-bold text-foreground">
             Pendaftaran Berhasil! 🎉
           </p>
           <p className="text-sm font-semibold text-foreground/60 max-w-sm">
             Data kamu sudah kami terima. Informasi selanjutnya akan dikirimkan
-            melalui WAG. Pastikan kamu bergabung di grup WhatsApp berikut.
+            melalui WAG.
           </p>
         </div>
-        <div className="rounded-xl border border-black/10 bg-white/60 px-5 py-4 text-left w-full max-w-sm">
-          <p className="text-xs font-semibold text-foreground mb-1 break-all">
-            <a
-              href="https://chat.whatsapp.com/I1XeCV1CF0T4cKAYXz98FJ?mode=gi_t"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              https://chat.whatsapp.com/I1XeCV1CF0T4cKAYXz98FJ?mode=gi_t
-            </a>
+
+        <div className="w-full max-w-sm rounded-2xl border-2 border-green-400 bg-green-50 px-5 py-5 space-y-3">
+          <div className="flex items-center gap-2 justify-center">
+            <MessageCircle className="w-5 h-5 text-green-600 shrink-0" />
+            <p className="text-sm font-bold text-green-800">
+              Informasi Penting!
+            </p>
+          </div>
+          <p className="text-xs text-green-700 font-medium">
+            Semua informasi lanjutan (jadwal, pengumuman, dll.) akan dibagikan
+            di grup ini. Jangan sampai ketinggalan!
           </p>
+          <a
+            href={WA_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-green-500 hover:bg-green-600 active:bg-green-700 transition-colors px-4 py-3 text-sm font-bold text-white"
+          >
+            <MessageCircle className="w-4 h-4" />
+            Gabung Grup WhatsApp Sekarang
+          </a>
         </div>
       </div>
     );
@@ -322,11 +336,12 @@ export default function OprecForm({ closeAt }: { closeAt: Date }) {
           </div>
         )}
 
+
         <Button
           type="submit"
           className="w-full py-6 text-base font-semibold"
           disabled={disabledAll}
-        >
+          >
           {isLoading ? (
             <span className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -338,6 +353,19 @@ export default function OprecForm({ closeAt }: { closeAt: Date }) {
             "Kirim Pendaftaran"
           )}
         </Button>
+          {!isClosed && (
+            <div className="flex items-start gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3">
+              <MessageCircle className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+              <p className="text-xs font-semibold text-green-800 leading-relaxed">
+                Setelah submit, kamu akan mendapatkan link{" "}
+                <span className="text-green-700 underline underline-offset-2">
+                  Grup WhatsApp
+                </span>{" "}
+                untuk informasi selanjutnya. Pastikan kamu bergabung agar tidak
+                ketinggalan info!
+              </p>
+            </div>
+          )}
       </form>
     </div>
   );

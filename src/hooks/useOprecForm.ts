@@ -31,7 +31,7 @@ export function useOprecForm(
         if (Object.keys(v).length > 0) return;
 
         if (onValidSubmit) onValidSubmit(form);
-        else alert("Pendaftaran berhasil dikirim ✅ (backend belum dihubungkan)");
+        else alert("Pendaftaran berhasil dikirim");
     }
 
     return { form, errors, alasanCount, onChange, onSubmit, setForm, setErrors };
