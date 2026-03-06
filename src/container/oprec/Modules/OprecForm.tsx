@@ -239,7 +239,7 @@ export default function OprecForm({ closeAt }: { closeAt: Date }) {
           error={errors.cv || cvFileError || undefined}
         >
           <p className="text-xs font-semibold text-foreground/60 -mt-1">
-            Berisi: CV, Sertifikat KSI, Sertifikat Pendukung, dan Deskripsi Diri 50 kata
+            Berisi: CV, Sertifikat KSI, Sertifikat Pendukung Keahlian, dan Deskripsi Diri 50 kata
           </p>
 
           <div className="space-y-2">
