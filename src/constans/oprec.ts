@@ -1,5 +1,5 @@
 export const OPREC_OPEN_AT = new Date("2026-03-04T21:00:00+07:00"); 
-export const OPREC_CLOSE_AT = new Date("2026-03-13T12:00:00+07:00"); 
+export const OPREC_CLOSE_AT = new Date("2026-03-13T17:00:00+07:00"); 
 export const OPREC_ANNOUNCE_AT = new Date("2026-03-16T19:00:00+07:00");
 
 // export const OPREC_OPEN_AT = new Date(Date.now() - 60_000); // sudah lewat 1 menit => OPEN
