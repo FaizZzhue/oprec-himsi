@@ -1,8 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { NilaiWawancaraInsert, NilaiWawancaraRow, NilaiWawancaraUpdate } from '@/lib/supabase'
 
-// Upsert aman untuk 2 akun dipakai banyak orang
-// conflict = pendaftaran_id + interviewer_id (akun) + interviewer_name (nama orang)
 export async function upsertNilai(payload: NilaiWawancaraInsert): Promise<NilaiWawancaraRow> {
   const { data, error } = await supabase
     .from('nilai_wawancara')

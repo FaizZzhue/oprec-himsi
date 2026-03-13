@@ -4,7 +4,7 @@ import DashboardHeader from '@/components/DashboardHeader'
 import { getAllNilai, updateNilaiById } from '@/services/nilaiWawancara'
 import { supabase } from '@/lib/supabase'
 import type { NilaiWawancaraRow, PendaftaranRow, NilaiWawancaraUpdate } from '@/lib/supabase'
-import { X, Edit2, Save, ChevronDown } from 'lucide-react'
+import { X, Edit2, Save, ChevronDown, ArrowUpDown } from 'lucide-react'
 import { useDashboard } from '@/hooks/useDashboard'
 
 const SCORE_CATEGORIES = [
@@ -19,6 +19,7 @@ const SCORE_CATEGORIES = [
 ] as const
 
 type ScoreKey = (typeof SCORE_CATEGORIES)[number]['key']
+type SortOrder = 'none' | 'desc' | 'asc'
 
 function calcAvgRow(n: NilaiWawancaraRow): number | null {
     const vals = [n.sikap, n.public_speaking, n.wawasan_org, n.manajemen, n.teamwork, n.leadership, n.komitmen, n.bidang]
@@ -102,6 +103,7 @@ export default function AdminRekap() {
     const [searchQuery, setSearchQuery] = useState('')
     const [bidangFilter, setBidangFilter] = useState('semua')
     const [interviewerFilter, setInterviewerFilter] = useState('semua')
+    const [sortOrder, setSortOrder] = useState<SortOrder>('none')
 
     const fetchAll = useCallback(async () => {
         setLoading(true)
@@ -136,8 +138,27 @@ export default function AdminRekap() {
             if (!map[n.pendaftaran_id]) map[n.pendaftaran_id] = { peserta, nilaiArr: [] }
             map[n.pendaftaran_id].nilaiArr.push(n)
         })
-        return Object.values(map)
-    }, [filtered, pendaftarMap])
+
+        const result = Object.values(map)
+
+        if (sortOrder === 'none') return result
+
+        return [...result].sort((a, b) => {
+            const avgA = (() => {
+                const avgs = a.nilaiArr.map(calcAvgRow).filter((v): v is number => v !== null)
+                return avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : null
+            })()
+            const avgB = (() => {
+                const avgs = b.nilaiArr.map(calcAvgRow).filter((v): v is number => v !== null)
+                return avgs.length ? avgs.reduce((x, y) => x + y, 0) / avgs.length : null
+            })()
+
+            if (avgA === null && avgB === null) return 0
+            if (avgA === null) return 1
+            if (avgB === null) return -1
+            return sortOrder === 'desc' ? avgB - avgA : avgA - avgB
+        })
+    }, [filtered, pendaftarMap, sortOrder])
 
     async function handleSave(id: string, updates: NilaiWawancaraUpdate & { catatan?: string | null }) {
         await updateNilaiById(id, updates)
@@ -146,6 +167,12 @@ export default function AdminRekap() {
 
     const BIDANG_LIST = ['PSDM', 'Sosial', 'Kominfo', 'Litbang']
     const totalPesertaDinilai = new Set(nilaiList.map(n => n.pendaftaran_id)).size
+
+    const sortLabel: Record<SortOrder, string> = {
+        none: 'Urutan Default',
+        desc: 'Nilai Tertinggi',
+        asc: 'Nilai Terendah',
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -156,7 +183,6 @@ export default function AdminRekap() {
                 <div className="bg-gradient-to-r from-[#2464a8] to-[#5a9fd4] rounded-2xl p-6 text-white">
                     <p className="text-xs font-bold opacity-70 uppercase tracking-wider mb-1">Rekap</p>
                     <h1 className="text-xl font-extrabold">Rekap Nilai Wawancara</h1>
-                    <p className="text-sm opacity-80 mt-1">Seluruh hasil penilaian dari semua pewawancara</p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -179,6 +205,8 @@ export default function AdminRekap() {
                 <div className="flex flex-wrap gap-3 items-center">
                     <input type="text" placeholder="Cari nama / NPM / pewawancara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                         className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 w-60" />
+
+                    {/* Bidang Filter */}
                     <div className="relative">
                         <select value={bidangFilter} onChange={e => setBidangFilter(e.target.value)} className="appearance-none rounded-xl border border-gray-200 bg-white pl-3 pr-8 py-2 text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer">
                             <option value="semua">Semua Bidang</option>
@@ -186,6 +214,8 @@ export default function AdminRekap() {
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
+
+                    {/* Interviewer Filter */}
                     <div className="relative">
                         <select value={interviewerFilter} onChange={e => setInterviewerFilter(e.target.value)} className="appearance-none rounded-xl border border-gray-200 bg-white pl-3 pr-8 py-2 text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer">
                             <option value="semua">Semua Pewawancara</option>
@@ -193,6 +223,33 @@ export default function AdminRekap() {
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
+
+                    {/* Sort Filter */}
+                    <div className="relative">
+                        <select
+                            value={sortOrder}
+                            onChange={e => setSortOrder(e.target.value as SortOrder)}
+                            className={[
+                                'appearance-none rounded-xl border pl-8 pr-8 py-2 text-sm font-semibold focus:outline-none cursor-pointer transition-colors',
+                                sortOrder !== 'none'
+                                    ? 'border-[#2464a8] bg-[#2464a8]/5 text-[#2464a8]'
+                                    : 'border-gray-200 bg-white text-gray-700'
+                            ].join(' ')}
+                        >
+                            <option value="none">Urutan Default</option>
+                            <option value="desc">Nilai Tertinggi → Terendah</option>
+                            <option value="asc">Nilai Terendah → Tertinggi</option>
+                        </select>
+                        <ArrowUpDown className={[
+                            'absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none',
+                            sortOrder !== 'none' ? 'text-[#2464a8]' : 'text-gray-400'
+                        ].join(' ')} />
+                        <ChevronDown className={[
+                            'absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none',
+                            sortOrder !== 'none' ? 'text-[#2464a8]' : 'text-gray-400'
+                        ].join(' ')} />
+                    </div>
+
                     <span className="ml-auto text-xs font-bold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{filtered.length} penilaian</span>
                 </div>
 
@@ -207,7 +264,7 @@ export default function AdminRekap() {
                             <span className="text-4xl">📊</span>
                             <p className="text-sm text-gray-400 font-semibold mt-2">Belum ada data penilaian</p>
                         </div>
-                    ) : rekapPeserta.map(({ peserta, nilaiArr }) => {
+                    ) : rekapPeserta.map(({ peserta, nilaiArr }, idx) => {
                         const allAvgs = nilaiArr.map(calcAvgRow).filter((v): v is number => v !== null)
                         const totalAvgNum = allAvgs.length ? allAvgs.reduce((a, b) => a + b, 0) / allAvgs.length : null
                         const totalAvg = totalAvgNum !== null ? totalAvgNum.toFixed(2) : '—'
@@ -217,6 +274,15 @@ export default function AdminRekap() {
                             <div key={peserta.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
                                     <div className="flex items-center gap-3">
+                                        {/* Rank badge — only shown when sort is active */}
+                                        {sortOrder !== 'none' && (
+                                            <div className={[
+                                                'w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 text-white',
+                                                idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-orange-400' : 'bg-gray-200 text-gray-500'
+                                            ].join(' ')}>
+                                                {idx + 1}
+                                            </div>
+                                        )}
                                         <div className="w-10 h-10 rounded-xl bg-[#2464a8]/10 flex items-center justify-center text-[#2464a8] font-extrabold text-sm shrink-0">
                                             {peserta.nama.charAt(0).toUpperCase()}
                                         </div>
