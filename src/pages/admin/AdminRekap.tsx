@@ -168,12 +168,6 @@ export default function AdminRekap() {
     const BIDANG_LIST = ['PSDM', 'Sosial', 'Kominfo', 'Litbang']
     const totalPesertaDinilai = new Set(nilaiList.map(n => n.pendaftaran_id)).size
 
-    const sortLabel: Record<SortOrder, string> = {
-        none: 'Urutan Default',
-        desc: 'Nilai Tertinggi',
-        asc: 'Nilai Terendah',
-    }
-
     return (
         <div className="min-h-screen bg-gray-50 flex">
             <Sidebar onLogout={handleLogout} activePage="rekap" />
@@ -206,7 +200,6 @@ export default function AdminRekap() {
                     <input type="text" placeholder="Cari nama / NPM / pewawancara..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                         className="h-9 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100 w-60" />
 
-                    {/* Bidang Filter */}
                     <div className="relative">
                         <select value={bidangFilter} onChange={e => setBidangFilter(e.target.value)} className="appearance-none rounded-xl border border-gray-200 bg-white pl-3 pr-8 py-2 text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer">
                             <option value="semua">Semua Bidang</option>
@@ -215,7 +208,6 @@ export default function AdminRekap() {
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
 
-                    {/* Interviewer Filter */}
                     <div className="relative">
                         <select value={interviewerFilter} onChange={e => setInterviewerFilter(e.target.value)} className="appearance-none rounded-xl border border-gray-200 bg-white pl-3 pr-8 py-2 text-sm font-semibold text-gray-700 focus:outline-none cursor-pointer">
                             <option value="semua">Semua Pewawancara</option>
@@ -224,7 +216,6 @@ export default function AdminRekap() {
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                     </div>
 
-                    {/* Sort Filter */}
                     <div className="relative">
                         <select
                             value={sortOrder}
@@ -274,7 +265,6 @@ export default function AdminRekap() {
                             <div key={peserta.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                 <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-3">
                                     <div className="flex items-center gap-3">
-                                        {/* Rank badge — only shown when sort is active */}
                                         {sortOrder !== 'none' && (
                                             <div className={[
                                                 'w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 text-white',
